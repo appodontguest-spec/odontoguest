@@ -3658,7 +3658,10 @@ function cleanOldAttachments() {
 
 // Keyboard navigation for viewer
 document.addEventListener('keydown', e => {
-  if (document.getElementById('att-viewer').style.display === 'flex') {
+
+if (meuElemento) {
+    meuElemento.style.display = 'none';
+}
     if (e.key === 'ArrowLeft') attViewerNav(-1);
     else if (e.key === 'ArrowRight') attViewerNav(1);
     else if (e.key === '+' || e.key === '=') attViewerZoom(1);
