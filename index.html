@@ -3658,15 +3658,16 @@ function cleanOldAttachments() {
 
 // Keyboard navigation for viewer
 document.addEventListener('keydown', e => {
-
-if (meuElemento) {
-    meuElemento.style.display = 'none';
-}
-    if (e.key === 'ArrowLeft') attViewerNav(-1);
-    else if (e.key === 'ArrowRight') attViewerNav(1);
-    else if (e.key === '+' || e.key === '=') attViewerZoom(1);
-    else if (e.key === '-') attViewerZoom(-1);
-  }
+    // 1. Primeiro capturamos o elemento real do visualizador (ajuste o ID 'attViewer' se o seu HTML usar outro nome)
+    const viewer = document.getElementById('attViewer'); 
+    
+    // 2. Se o visualizador existir e estiver visível, executamos os comandos do teclado
+    if (viewer && viewer.style.display !== 'none') {
+        if (e.key === 'ArrowLeft') attViewerNav(-1);
+        else if (e.key === 'ArrowRight') attViewerNav(1);
+        else if (e.key === '+' || e.key === '=') attViewerZoom(1);
+        else if (e.key === '-') attViewerZoom(-1);
+    }
 });
 
 // ─── HELPERS ───────────────────────────────────────────────
