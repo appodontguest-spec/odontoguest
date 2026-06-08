@@ -5289,26 +5289,24 @@ setTimeout(()=>{if(document.getElementById('app').style.display!=='none')checkFi
 
 <!-- ═══ ONBOARDING TOUR CONTAINER ═══ -->
 <div id="onb-welcome-wrap" style="display:none"></div>
-<div id="onb-highlight" class="onb-highlight-box" style="display:none"></div>
-<div id="onb-tooltip" class="onb-tooltip" style="display:none"></div>
+<div id="destaque onb" class="caixa de destaque onb" style="display:none"></div>
+<div id="dica de ferramenta onb" class="dica de ferramenta onb" style="display:none"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA4fqE1PbeGmGvR86LnPguxaJWCFKyZLV8",
+    authDomain: "odontoguestbros.firebaseapp.com",
+    projectId: "odontoguestbros",
+    storageBucket: "odontoguestbros.firebasestorage.app",
+    messagingSenderId: "97079066299",
+    appId: "1:97079066299:web:c115c15b3de7b47ad2339e"
+  };
+
+  const app = initializeApp(firebaseConfig);
+</script>
 
 </body>
 </html>
-
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyA4fqE1PbeGmGvR86LnPguxaJWCFKyZLV8",
-  authDomain: "odontoguestbros.firebaseapp.com",
-  projectId: "odontoguestbros",
-  storageBucket: "odontoguestbros.firebasestorage.app",
-  messagingSenderId: "97079066299",
-  appId: "1:97079066299:web:c115c15b3de7b47ad2339e"
-};
-
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
