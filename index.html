@@ -21,6 +21,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>OdontoGuest v3.9</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦷</text></svg>"/>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#0c6e9e"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="OdontoGuest"/>
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -5370,5 +5377,54 @@ setTimeout(()=>{if(document.getElementById('app').style.display!=='none')checkFi
 
 <!-- COPYRIGHT -->
 <div style="display:none" id="og-copyright" aria-hidden="true">© 2026 OdontoGuest. Todos os direitos reservados. Protegido pela Lei 9.610/1998. Uso não autorizado é proibido.</div>
+
+<!-- ═══ PWA: BOTÃO DE INSTALAÇÃO ═══ -->
+<button id="pwa-install-btn" style="display:none;position:fixed;right:18px;bottom:18px;z-index:9998;background:var(--P,#0c6e9e);color:#fff;border:none;border-radius:14px;padding:12px 18px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer;align-items:center;gap:8px">📲 Instalar aplicativo</button>
+<div id="pwa-update-toast" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9998;background:#0d2137;color:#fff;border-radius:12px;padding:11px 18px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);align-items:center;gap:12px">
+  <span>Nova versão disponível.</span>
+  <button onclick="location.reload()" style="background:#38b6f0;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-weight:700;font-size:12px;cursor:pointer">Atualizar</button>
+</div>
+
+<script>
+// ═══ PWA: registro do service worker, prompt de instalação e aviso de atualização ═══
+(function(){
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('service-worker.js').then(function(reg){
+        reg.addEventListener('updatefound', function(){
+          var nw = reg.installing;
+          if(!nw) return;
+          nw.addEventListener('statechange', function(){
+            if(nw.state === 'installed' && navigator.serviceWorker.controller){
+              var toast = document.getElementById('pwa-update-toast');
+              if(toast) toast.style.display = 'flex';
+            }
+          });
+        });
+      }).catch(function(err){ console.warn('SW registration failed:', err); });
+    });
+  }
+
+  var deferredPrompt = null;
+  var installBtn = document.getElementById('pwa-install-btn');
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    if(installBtn) installBtn.style.display = 'flex';
+  });
+  if(installBtn){
+    installBtn.addEventListener('click', function(){
+      installBtn.style.display = 'none';
+      if(!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.finally(function(){ deferredPrompt = null; });
+    });
+  }
+  window.addEventListener('appinstalled', function(){
+    if(installBtn) installBtn.style.display = 'none';
+    deferredPrompt = null;
+  });
+})();
+</script>
 </body>
 </html>

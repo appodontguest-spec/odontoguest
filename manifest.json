@@ -1,0 +1,19 @@
+{
+  "name": "OdontoGuest - Gestão Odontológica",
+  "short_name": "OdontoGuest",
+  "description": "Sistema completo de gestão para clínicas odontológicas: prontuários, agenda, financeiro e estoque.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d2137",
+  "theme_color": "#0c6e9e",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
