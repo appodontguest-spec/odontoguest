@@ -373,7 +373,6 @@ label{font-size:11.5px;font-weight:700;color:var(--t3);display:block;margin-bott
   <button class="nav-btn" id="nav-admin" onclick="go('admin')" style="display:none"><span class="nav-icon">⚙️</span><span class="nav-label">Admin</span></button>
   <button class="nav-btn" onclick="go('messages')"><span class="nav-icon">✉️</span><span class="nav-label">Mensagens</span></button>
   <button class="nav-btn" id="nav-backup" onclick="go('backup')" style="display:none"><span class="nav-icon">💾</span><span class="nav-label">Backup</span></button>
-  <div id="sync-status" style="margin:6px 10px 3px;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;text-align:center;background:#fef3c7;color:#92400e;transition:all .3s">🔄 Conectando...</div>
   <div class="s-foot">
     <div class="user-chip" onclick="openUserProfile()" title="Ver perfil">
       <div class="user-av" id="u-av" style="overflow:hidden;flex-shrink:0">
@@ -1400,7 +1399,6 @@ function enterApp(pro){
   if(isDev()||canAdmin()){ const n=document.getElementById('nav-backup'); if(n) n.style.display='flex'; }
   applyPermissions();
   renderDashboard();
-  setTimeout(initFirebase,600);
 }
 
 function doLogout(){
@@ -3086,144 +3084,10 @@ function exportRecords(){exportCSV('visits');}
 
 function renderBackup(){
   const total=JSON.stringify(D).length;
-  document.getElementById('backup-info').innerHTML=`Firebase: <b>${typeof syncEnabled!=='undefined'&&syncEnabled?'☁️ Conectado':'📵 Offline'}</b> · Local: <b>${(total/1024).toFixed(1)} KB</b>`;
+  document.getElementById('backup-info').innerHTML=`Local: <b>${(total/1024).toFixed(1)} KB</b>`;
 }
 
 function autoBackup(){const now=Date.now(),last=+localStorage.getItem('og3_last_autobackup')||0;if(now-last>3600000){localStorage.setItem('og3_last_autobackup',now);localStorage.setItem('og3_autobackup_data',JSON.stringify({version:'3.9',timestamp:new Date().toISOString(),data:D}));}}
-
-// ─── FIREBASE via REST API (works from file://) ────────────
-// Uses Firestore REST API directly - no SDK needed, no CORS issues
-// ⚠️ FIX 403: Autorize o domínio em Firebase Console →
-//    Authentication → Settings → Authorized domains → Add:
-//    appodontguest-spec.github.io
-// ⚠️ FIX 403: Em Firestore → Rules, use:
-//    allow read, write: if true;  (dentro de match /og3/{document=**})
-const FB_PROJECT = 'odontoguest-befd8';
-const FB_API_KEY = 'AIzaSyDUpGSDrNeBWFOI5qDM__tKftK2cVKmnF8';
-const FB_BASE = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents/og3`;
-let syncEnabled = false;
-let pollInterval = null;
-const FB_COLS = ['professionals','patients','appointments','visits','budgets','returns','stock','otherPayments','suppliers','roles','config','procs','messages'];
-
-function showSync(status) {
-  const el = document.getElementById('sync-status');
-  if (!el) return;
-  const S = {
-    connecting:{bg:'#fef3c7',c:'#92400e',t:'🔄 Conectando...'},
-    online:    {bg:'#dcfce7',c:'#166534',t:'☁️ Online — Sincronizado'},
-    offline:   {bg:'#fee2e2',c:'#991b1b',t:'📵 Offline (local)'},
-    saving:    {bg:'#e0f4ff',c:'#0c6e9e',t:'💾 Salvando...'},
-  };
-  const s = S[status]||S.offline;
-  el.style.background=s.bg; el.style.color=s.c; el.textContent=s.t;
-}
-
-// Convert JS value to Firestore REST format
-function toFS(val) {
-  if (val === null || val === undefined) return {nullValue: null};
-  if (typeof val === 'boolean') return {booleanValue: val};
-  if (typeof val === 'number') return Number.isInteger(val) ? {integerValue: String(val)} : {doubleValue: val};
-  if (typeof val === 'string') return {stringValue: val};
-  if (Array.isArray(val)) return {arrayValue: {values: val.map(toFS)}};
-  if (typeof val === 'object') return {mapValue: {fields: Object.fromEntries(Object.entries(val).map(([k,v])=>[k,toFS(v)]))}};
-  return {stringValue: String(val)};
-}
-
-// Convert Firestore REST format to JS value
-function fromFS(fval) {
-  if (!fval) return null;
-  if ('nullValue' in fval) return null;
-  if ('booleanValue' in fval) return fval.booleanValue;
-  if ('integerValue' in fval) return parseInt(fval.integerValue);
-  if ('doubleValue' in fval) return fval.doubleValue;
-  if ('stringValue' in fval) return fval.stringValue;
-  if ('arrayValue' in fval) return (fval.arrayValue.values||[]).map(fromFS);
-  if ('mapValue' in fval) return Object.fromEntries(Object.entries(fval.mapValue.fields||{}).map(([k,v])=>[k,fromFS(v)]));
-  return null;
-}
-
-async function fbGet(col) {
-  const r = await fetch(`${FB_BASE}/${col}?key=${FB_API_KEY}`);
-  if (!r.ok) return null;
-  const d = await r.json();
-  if (!d.fields || !d.fields.v) return null;
-  return fromFS(d.fields.v);
-}
-
-async function fbSet(col, val) {
-  const body = JSON.stringify({fields:{v: toFS(val), ts:{stringValue: new Date().toISOString()}}});
-  const r = await fetch(`${FB_BASE}/${col}?key=${FB_API_KEY}`, {
-    method:'PATCH', headers:{'Content-Type':'application/json'}, body
-  });
-  return r.ok;
-}
-
-async function initFirebase() {
-  showSync('connecting');
-  try {
-    // Test connection
-    const r = await fetch(`${FB_BASE}/config?key=${FB_API_KEY}`);
-    if (!r.ok && r.status !== 404) throw new Error('Cannot reach Firestore');
-    syncEnabled = true;
-    await loadFromCloud();
-    // Poll every 8 seconds for changes from other devices
-    if (pollInterval) clearInterval(pollInterval);
-    pollInterval = setInterval(pollChanges, 8000);
-    showSync('online');
-  } catch(e) {
-    console.warn('Firebase offline:', e.message);
-    showSync('offline');
-  }
-}
-
-let lastPollData = {};
-async function pollChanges() {
-  if (!syncEnabled) return;
-  try {
-    for (const key of FB_COLS) {
-      const val = await fbGet(key);
-      if (val === null) continue;
-      const serialized = JSON.stringify(val);
-      if (serialized === lastPollData[key]) continue; // no change
-      lastPollData[key] = serialized;
-      if (serialized === JSON.stringify(D[key])) continue; // same as local
-      D[key] = val; LS.set(key, val);
-      // Don't reset filter-based pages during background poll
-      if(!['records','budgets'].includes(activePage)){
-        const R={dashboard:renderDashboard,agenda:renderAgenda,patients:renderPatients,
-          returns:renderReturns,finance:renderFinance,otherpay:renderOtherPay,stock:renderStock,
-          shopping:renderShopping,suppliers:renderSuppliers,professionals:renderProfessionals,admin:renderAdmin};
-        try { R[activePage]?.(); } catch(e) {}
-      }
-      buildLoginSel();
-      showSync('online');
-    }
-  } catch(e) { showSync('offline'); }
-}
-
-async function loadFromCloud() {
-  let changed = false;
-  for (const key of FB_COLS) {
-    try {
-      const val = await fbGet(key);
-      if (val !== null) {
-        D[key] = val; LS.set(key, val);
-        lastPollData[key] = JSON.stringify(val);
-        changed = true;
-      }
-    } catch(e) {}
-  }
-  if (changed) buildLoginSel();
-}
-
-function save(key) {
-  LS.set(key, D[key]);
-  if (syncEnabled) {
-    showSync('saving');
-    fbSet(key, D[key]).then(ok => showSync(ok ? 'online' : 'offline'));
-  }
-}
-function saveAll() { FB_COLS.forEach(k => save(k)); }
 
 // ─── CLEAR DEMO DATA ───────────────────────────────────────
 function clearDemoData() {
@@ -5289,14 +5153,18 @@ function endOnboarding(){
   if(w)w.style.display='none';
 }
 
-// Override save to also save to clinic namespace
+// Override save to also save to clinic namespace.
+// IMPORTANT: this must be a plain reassignment (save = function...), not a
+// `function save(k){}` declaration — a second declaration with the same name
+// in this scope gets hoisted and collapses onto this one, so `_origSave`
+// would end up pointing at itself and recurse infinitely on every save().
 const _origSave=save;
-function save(k){
+save=function(k){
   _origSave(k);
   if(activeClinicId){
     try{localStorage.setItem('og3_clinic_'+activeClinicId+'_'+k,JSON.stringify(D[k]));}catch(e){}
   }
-}
+};
 
 // ─── INIT ──────────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
